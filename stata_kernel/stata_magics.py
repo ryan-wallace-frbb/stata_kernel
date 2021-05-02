@@ -2,12 +2,12 @@ import sys
 import re
 import urllib
 import pandas as pd
+from pathlib import Path
 from textwrap import dedent
 from bs4 import BeautifulSoup as bs
 from argparse import ArgumentParser, SUPPRESS
 from pkg_resources import resource_filename
 
-from .config import config
 from .code_manager import CodeManager
 from .utils import check_stata_kernel_updated_version
 
@@ -293,11 +293,11 @@ class StataMagics():
 
     def show_data_head(self, code, kernel, N=10):
         hasif = re.search(r"\bif\b", code) is not None
-        using = config.get('cache_dir') / 'data_head.csv'
+        using = Path(kernel.conf.get('cache_dir').name) / 'data_head.csv'
         cmd = '_StataKernelHead ' + code.strip() + ' using `"' +\
               str(using) + '"' + "'"
         cmd += ' , n_default({})'.format(N)
-        cm = CodeManager(cmd)
+        cm = CodeManager(cmd, kernel)
         text_to_run, md5, text_to_exclude = cm.get_text()
         rc, res = kernel.stata.do(
             text_to_run, md5, text_to_exclude=text_to_exclude, display=False)
@@ -329,10 +329,10 @@ class StataMagics():
             return ''
 
         hasif = re.search(r"\bif\b", code) is not None
-        using = config.get('cache_dir') / 'data_tail.csv'
+        using = Path(kernel.conf.get('cache_dir').name) / 'data_tail.csv'
         cmd = '_StataKernelTail ' + code.strip() + ' using `"' + \
               str(using) + '"' + "'"
-        cm = CodeManager(cmd)
+        cm = CodeManager(cmd, kernel)
         text_to_run, md5, text_to_exclude = cm.get_text()
         rc, res = kernel.stata.do(
             text_to_run, md5, text_to_exclude=text_to_exclude, display=False)
@@ -392,7 +392,7 @@ class StataMagics():
         if self.status == -1:
             return code
 
-        cm = CodeManager(kernel.stata._mata_escape("macro dir"))
+        cm = CodeManager(kernel.stata._mata_escape("macro dir"), kernel)
         text_to_run, md5, text_to_exclude = cm.get_text()
         rc, res = kernel.stata.do(
             text_to_run, md5, text_to_exclude=text_to_exclude, display=False)
@@ -467,7 +467,7 @@ class StataMagics():
         return ''
 
     def magic_html(self, code, kernel):
-        cm = CodeManager(code)
+        cm = CodeManager(code, kernel)
         text_to_run, md5, text_to_exclude = cm.get_text()
         rc, res = kernel.stata.do(
             text_to_run, md5, text_to_exclude=text_to_exclude, display=False)
@@ -486,7 +486,7 @@ class StataMagics():
         return ''
 
     def magic_latex(self, code, kernel):
-        cm = CodeManager(code)
+        cm = CodeManager(code, kernel)
         text_to_run, md5, text_to_exclude = cm.get_text()
         rc, res = kernel.stata.do(
             text_to_run, md5, text_to_exclude=text_to_exclude, display=False)
@@ -519,14 +519,14 @@ class StataMagics():
                     self.parse.set.error(msg)
 
                 # reset graph settings
-                config.set('graph_format', 'svg', permanent=perm)
-                config.set('graph_scale', '1', permanent=perm)
-                config._remove_unsafe('graph_width', permanent=perm)
-                config._remove_unsafe('graph_height', permanent=perm)
+                kernel.conf.set('graph_format', 'svg', permanent=perm)
+                kernel.conf.set('graph_scale', '1', permanent=perm)
+                kernel.conf._remove_unsafe('graph_width', permanent=perm)
+                kernel.conf._remove_unsafe('graph_height', permanent=perm)
             else:
-                config.set(key, value, permanent=perm)
+                kernel.conf.set(key, value, permanent=perm)
 
-        except:
+        except Exception:
             pass
 
         self.status = -1

@@ -13,7 +13,7 @@ from xml.etree import ElementTree as ET
 from pkg_resources import resource_filename
 from ipykernel.kernelbase import Kernel
 
-from .config import config
+from .config import Config
 from .completions import CompletionsManager
 from .code_manager import CodeManager
 from .stata_session import StataSession
@@ -66,6 +66,7 @@ class StataKernel(Kernel):
 
         super(StataKernel, self).__init__(*args, **kwargs)
 
+        self.conf = Config()
         self.graph_formats = ['svg', 'png', 'pdf', 'eps']
         self.sc_delimit_mode = False
         self.stata = StataSession(self)
@@ -114,7 +115,7 @@ class StataKernel(Kernel):
             return self.magics.quit_early
 
         # Tokenize code and return code chunks
-        cm = CodeManager(code, self.sc_delimit_mode, self.stata.mata_mode)
+        cm = CodeManager(code, self, self.sc_delimit_mode, self.stata.mata_mode)
         self.stata._mata_refresh(cm)
         text_to_run, md5, text_to_exclude = cm.get_text(self.stata)
 
@@ -177,7 +178,7 @@ class StataKernel(Kernel):
 
     def quickdo(self, code):
         code = self.stata._mata_escape(code)
-        cm = CodeManager(code)
+        cm = CodeManager(code, self)
         text_to_run, md5, text_to_exclude = cm.get_text()
         rc, res = self.stata.do(
             text_to_run, md5, text_to_exclude=text_to_exclude, display=False)
@@ -198,7 +199,7 @@ class StataKernel(Kernel):
 
     def cleanLogs(self, what):
         code = self.stata._mata_escape("_StataKernelLog {0}".format(what))
-        cm = CodeManager(code)
+        cm = CodeManager(code, self)
         text_to_run, md5, text_to_exclude = cm.get_text()
         rc, res = self.stata.do(
             text_to_run, md5, text_to_exclude=text_to_exclude, display=False)
@@ -231,8 +232,8 @@ class StataKernel(Kernel):
             graph_epstopng = False
             graph_epstopdf = False
             if graph_path.endswith('.eps'):
-                epstopdf_program = config.get('graph_epstopdf_program')
-                epstopng_program = config.get('graph_epstopng_program')
+                epstopdf_program = self.conf.get('graph_epstopdf_program')
+                epstopng_program = self.conf.get('graph_epstopng_program')
                 if epstopng_program:
                     base_path = graph_path
                     graph_path = Path(graph_path).with_suffix('.png')
@@ -320,7 +321,7 @@ class StataKernel(Kernel):
         <https://kylebarron.dev/stata_kernel/using_stata_kernel/intro/#graph-redundancy>
         """
         msg = dedent(msg)
-        warn_setting = config.get('graph_redundancy_warning', 'True')
+        warn_setting = self.conf.get('graph_redundancy_warning', 'True')
         if warn and (warn_setting.lower() == 'true'):
             self.send_response(
                 self.iopub_socket, 'display_data', {
@@ -338,6 +339,10 @@ class StataKernel(Kernel):
         stopping.
         """
         self.stata.shutdown()
+
+        cache_dir = self.conf.get('cache_dir')
+        cache_dir.cleanup()
+
         return {'restart': restart}
 
     def do_is_complete(self, code):
@@ -362,7 +367,7 @@ class StataKernel(Kernel):
 
     def is_complete(self, code):
         return CodeManager(
-            code, self.sc_delimit_mode, self.stata.mata_mode).is_complete
+            code, self, self.sc_delimit_mode, self.stata.mata_mode).is_complete
 
     def cleanTail(self, tail, rprompt):
         """
@@ -429,7 +434,7 @@ class StataKernel(Kernel):
             if ismata:
                 keyword = 'mf_' + keyword
 
-            cm = CodeManager('help ' + keyword)
+            cm = CodeManager('help ' + keyword, self)
             text_to_run, md5, text_to_exclude = cm.get_text()
             rc, res = self.stata.do(
                 text_to_run, md5, text_to_exclude=text_to_exclude,

@@ -4,7 +4,6 @@ import platform
 
 from .code_manager import CodeManager
 from .pygments._mata_builtins import mata_builtins
-from .config import config
 
 
 # NOTE: Add command completion (e.g. r<tab>; mata: st_<tab>)
@@ -99,12 +98,12 @@ class CompletionsManager():
 
         self.suggestions = self.get_suggestions(kernel)
         self.suggestions['magics'] = kernel.magics.available_magics
-        self.suggestions['magics_set'] = config.all_settings
+        self.suggestions['magics_set'] = self.kernel.conf.all_settings
 
     def refresh(self, kernel):
         self.suggestions = self.get_suggestions(kernel)
         self.suggestions['magics'] = kernel.magics.available_magics
-        self.suggestions['magics_set'] = config.all_settings
+        self.suggestions['magics_set'] = self.kernel.conf.all_settings
         self.globals = self.get_globals(kernel)
 
     def get_env(self, code, rdelimit, sc_delimit_mode, mata_mode):
@@ -294,7 +293,8 @@ class CompletionsManager():
 
                 pos += posextra
 
-        closing_symbol = config.get('autocomplete_closing_symbol', 'False')
+        closing_symbol = self.kernel.conf.get('autocomplete_closing_symbol',
+                                              'False')
         closing_symbol = closing_symbol.lower() == 'true'
         if not closing_symbol:
             rcomp = ''
@@ -489,7 +489,7 @@ class CompletionsManager():
 
     def quickdo(self, code, kernel):
         code = kernel.stata._mata_escape(code)
-        cm = CodeManager(code)
+        cm = CodeManager(code, kernel)
         text_to_run, md5, text_to_exclude = cm.get_text()
         rc, res = kernel.stata.do(
             text_to_run, md5, text_to_exclude=text_to_exclude, display=False)

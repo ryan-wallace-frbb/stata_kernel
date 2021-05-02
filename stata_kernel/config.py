@@ -4,6 +4,7 @@ import platform
 
 from pathlib import Path
 from textwrap import dedent
+from tempfile import TemporaryDirectory
 from configparser import ConfigParser, NoSectionError
 
 from .utils import find_path
@@ -77,9 +78,10 @@ class Config():
             except NoSectionError:
                 pass
 
-        cache_dir = Path(self.get('cache_directory',
-                                  '~/.stata_kernel_cache')).expanduser()
-        cache_dir.mkdir(parents=True, exist_ok=True)
+        cache_par_dir = Path(self.get('cache_directory',
+                                      '~/.stata_kernel_cache')).expanduser()
+        cache_par_dir.mkdir(parents=True, exist_ok=True)
+        cache_dir = TemporaryDirectory(dir=cache_par_dir)
 
         stata_path = self.get('stata_path', find_path())
         if not stata_path:
@@ -106,10 +108,6 @@ class Config():
         return self.env.get(key, backup)
 
     def set(self, key, val, permanent=False):
-        if key.startswith('cache_dir'):
-            val = Path(val).expanduser()
-            val.mkdir(parents=True, exist_ok=True)
-
         self.env[key] = val
 
         if permanent:
@@ -166,6 +164,3 @@ class Config():
             self.config.remove_option(option=key, section='stata_kernel')
             with self.config_path.open('w') as f:
                 self.config.write(f)
-
-
-config = Config()

@@ -12,7 +12,6 @@ from textwrap import dedent
 from pkg_resources import resource_filename
 
 from .utils import check_stata_kernel_updated_version
-from .config import config
 
 if platform.system() == 'Windows':
     import win32com.client
@@ -41,7 +40,6 @@ class StataSession():
         """Initialize Session
         Args:
             kernel (ipykernel.kernelbase): Running instance of kernel
-            config (ConfigParser): config class
         """
 
         self.kernel = kernel
@@ -86,13 +84,13 @@ class StataSession():
         if platform.system() == 'Windows':
             self.init_windows()
         elif platform.system() == 'Darwin':
-            if config.get('execution_mode') == 'automation':
+            if self.kernel.conf.get('execution_mode') == 'automation':
                 self.init_mac_automation()
             else:
                 self.init_console()
         else:
             self.init_console()
-            config.set('execution_mode', 'console', permanent=True)
+            self.kernel.conf.set('execution_mode', 'console', permanent=True)
 
         # Stata
         # -----
@@ -121,7 +119,7 @@ class StataSession():
             self.stata_version = res
             isold = int(res[:2]) < 15
             if (platform.system() == 'Windows') and isold:
-                config.set('graph_format', 'png', permanent=True)
+                self.kernel.conf.set('graph_format', 'png', permanent=True)
         except ValueError:
             self.stata_version = 'unknown'
             pass
@@ -162,7 +160,7 @@ class StataSession():
             raise com_error(dedent(msg))
 
         self.automate(cmd_name='UtilShowStata', value=1)
-        config.set('execution_mode', 'automation', permanent=True)
+        self.kernel.conf.set('execution_mode', 'automation', permanent=True)
         self.start_log_aut()
 
     def init_mac_automation(self):
@@ -180,11 +178,12 @@ class StataSession():
         gone away.
         """
         self.child = pexpect.spawn(
-            config.get('stata_path'), encoding='utf-8', codec_errors='replace')
+            self.kernel.conf.get('stata_path'), encoding='utf-8',
+            codec_errors='replace')
         self.child.delaybeforesend = None
-        self.child.logfile = (
-            config.get('cache_dir') / 'console_debug.log').open(
-                'w', encoding='utf-8')
+        debug_log_fp = (Path(self.kernel.conf.get('cache_dir').name) /
+                        'console_debug.log')
+        self.child.logfile = debug_log_fp.open('w', encoding='utf-8')
         banner = []
         try:
             self.child.expect(self.prompt, timeout=0.2)
@@ -217,9 +216,10 @@ class StataSession():
         log_counter = 0
         rc = 1
         while (rc) and (log_counter < 15):
-            log_path = config.get('cache_dir') / 'log{}.log'.format(log_counter)
-            cmd = 'log using `"{}"\', replace text name(stata_kernel_log)'.format(
-                log_path)
+            log_path = (Path(self.kernel.conf.get('cache_dir').name) /
+                        'log{}.log'.format(log_counter))
+            cmd = ('log using `"{}"\', replace text '
+                   'name(stata_kernel_log)').format(log_path)
             rc = self.automate('DoCommand', cmd)
             log_counter += 1
             sleep(0.1)
@@ -230,9 +230,9 @@ class StataSession():
         self.fd = Path(log_path).open()
         self.log_fd = pexpect.fdpexpect.fdspawn(
             self.fd, encoding='utf-8', maxread=9999999, codec_errors='replace')
-        self.log_fd.logfile = (
-            config.get('cache_dir') / 'console_debug.log').open(
-                'w', encoding='utf-8')
+        debug_log_fp = (Path(self.kernel.conf.get('cache_dir').name) /
+                        'console_debug.log')
+        self.log_fd.logfile = debug_log_fp.open('w', encoding='utf-8')
 
         return 0
 
@@ -251,11 +251,11 @@ class StataSession():
             display (bool): Whether to send results to front-end
         """
 
-        self.cache_dir_str = str(config.get('cache_dir'))
+        self.cache_dir_str = self.kernel.conf.get('cache_dir').name
         if platform.system() == 'Windows':
             self.cache_dir_str = re.sub(r'\\', '/', self.cache_dir_str)
 
-        if config.get('execution_mode') == 'console':
+        if self.kernel.conf.get('execution_mode') == 'console':
             self.child.sendline(text)
             child = self.child
         else:
@@ -325,10 +325,10 @@ class StataSession():
                 continue
             if match_index == 2:
                 g_path = [self.expect_graph(child, child.match.group(0))]
-                if ((config.get('graph_format') == 'svg')
-                        and config.get('graph_svg_redundancy', 'True')) or (
-                            (config.get('graph_format') == 'png')
-                            and config.get('graph_png_redundancy', 'True')):
+                if (((self.kernel.conf.get('graph_format') == 'svg') and
+                    self.kernel.conf.get('graph_svg_redundancy', 'True')) or
+                   ((self.kernel.conf.get('graph_format') == 'png') and
+                   self.kernel.conf.get('graph_png_redundancy', 'True'))):
 
                     while True:
                         ind = child.expect([g_exp, pexpect.EOF], timeout=None)
@@ -491,7 +491,7 @@ class StataSession():
             child (pexpect.spawn): pexpect instance to send break to
             md5 (str): The md5 to send a second time
         """
-        if config.get('execution_mode') == 'console':
+        if self.kernel.conf.get('execution_mode') == 'console':
             child.sendcontrol('c')
             child.sendcontrol('d')
             self.child.sendline(md5)
@@ -512,7 +512,7 @@ class StataSession():
                 return getattr(self.stata, cmd_name)()
             return getattr(self.stata, cmd_name)(value, **kwargs)
 
-        app_name = Path(config.get('stata_path')).name
+        app_name = Path(self.kernel.conf.get('stata_path')).name
         cmd = 'tell application "{}" to {}'.format(app_name, cmd_name)
         if value is not None:
             value = str(value).replace('\n', '\\n').replace('\r', '\\r')
@@ -552,18 +552,21 @@ class StataSession():
         return stdout
 
     def shutdown(self):
-        if config.get('execution_mode') == 'automation':
+        if self.kernel.conf.get('execution_mode') == 'automation':
             self.automate('DoCommandAsync', 'exit, clear')
+            self.log_fd.logfile.close()
         else:
             self.child.close(force=True)
+            self.child.logfile.close()
+
         return
 
     def show_gui(self):
-        if config.get('execution_mode', '') == 'automation':
+        if self.kernel.conf.get('execution_mode', '') == 'automation':
             self.automate(cmd_name='UtilShowStata', value=0)
 
     def hide_gui(self):
-        if config.get('execution_mode', '') == 'automation':
+        if self.kernel.conf.get('execution_mode', '') == 'automation':
             self.automate(cmd_name='UtilShowStata', value=1)
 
     def _mata_refresh(self, cm):
@@ -636,7 +639,7 @@ class StataSession():
 
             self.mata_restart = True
             if re.match(r'(\r?\n)? *>(\r?\n)?', child.after):
-                if config.get('execution_mode') == 'console':
+                if self.kernel.conf.get('execution_mode') == 'console':
                     child.sendcontrol('c')
                     child.sendcontrol('d')
                     child.sendline('\r\n')

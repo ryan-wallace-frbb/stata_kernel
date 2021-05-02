@@ -1,6 +1,7 @@
 import pytest
 from pygments.token import Token
 from stata_kernel.code_manager import CodeManager
+from stata_kernel.kernel import StataKernel
 
 
 # yapf: disable
@@ -21,7 +22,8 @@ class TestCommentsFromMataList(object):
         ```
         """
         code = 'mata\n/*a\na\n*/\nend'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Mata.Open, 'mata'),
             (Token.Text, '\n'),
@@ -34,6 +36,7 @@ class TestCommentsFromMataList(object):
             (Token.Mata.Close, '\nend'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_ignored_multiline_after_inline_comment(self):
         """
@@ -45,7 +48,8 @@ class TestCommentsFromMataList(object):
         ```
         """
         code = 'mata\n// /*a\na\nend'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Mata.Open, 'mata'),
             (Token.Text, '\n'),
@@ -59,6 +63,7 @@ class TestCommentsFromMataList(object):
             (Token.Mata.Close, '\nend'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_comment_after_pointer(self):
         """
@@ -71,7 +76,8 @@ class TestCommentsFromMataList(object):
         ```
         """
         code = 'mata\n*&1 /*a\na\n*/\nend'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Mata.Open, 'mata'),
             (Token.Text, '\n'),
@@ -88,6 +94,7 @@ class TestCommentsFromMataList(object):
             (Token.Mata.Close, '\nend'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_line_continuation(self):
         """
@@ -102,7 +109,8 @@ class TestCommentsFromMataList(object):
         ```
         """
         code = 'mata\na=1\nb=&a\n*b ///\n=2\na\nend'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Mata.Open, 'mata'),
             (Token.Text, '\n'),
@@ -127,6 +135,7 @@ class TestCommentsFromMataList(object):
             (Token.Mata.Close, '\nend'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_line_continuation_ignored_after_inline_comment(self):
         """
@@ -138,7 +147,8 @@ class TestCommentsFromMataList(object):
         ```
         """
         code = 'mata\n// /// a\na\nend'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Mata.Open, 'mata'),
             (Token.Text, '\n'),
@@ -154,6 +164,7 @@ class TestCommentsFromMataList(object):
             (Token.Mata.Close, '\nend'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_nesting_of_multiline_comments(self):
         """
@@ -170,7 +181,8 @@ class TestCommentsFromMataList(object):
         ```
         """
         code = 'mata\n/*\n/* a */\na\n*/* a\na\n*/\na\nend'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Mata.Open, 'mata'),
             (Token.Text, '\n'),
@@ -196,6 +208,7 @@ class TestCommentsFromMataList(object):
             (Token.Mata.Close, '\nend'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_inline_comment_breaks_line_continuation_comment(self):
         """
@@ -206,7 +219,8 @@ class TestCommentsFromMataList(object):
         ```
         """
         code = 'mata\na=1 ///\n// a ///\na\nend'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Mata.Open, 'mata'),
             (Token.Text, '\n'),
@@ -228,6 +242,7 @@ class TestCommentsFromMataList(object):
             (Token.Mata.Close, '\nend'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
 
 class TestMultilineCommentsMata(object):
@@ -245,7 +260,8 @@ class TestMultilineCommentsMata(object):
         ```
         """
         code = 'mata /*\n\n*/ 1\nmata\n/*\n\n*/\nend'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Text, 'm'),
             (Token.Text, 'a'),
@@ -268,12 +284,14 @@ class TestMultilineCommentsMata(object):
             (Token.Mata.Close, '\nend'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
 
 class TestLineContinuationCommentsMata(object):
     def test1(self):
         code = 'mata:\na ///\na\nend'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Mata.OpenError, 'mata:'),
             (Token.Text, '\n'),
@@ -285,10 +303,12 @@ class TestLineContinuationCommentsMata(object):
             (Token.Mata.Close, '\nend'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test2(self):
         code = 'mata:\na///\na\nend'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Mata.OpenError, 'mata:'),
             (Token.Text, '\n'),
@@ -301,10 +321,12 @@ class TestLineContinuationCommentsMata(object):
             (Token.Mata.Close, '\nend'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test3(self):
         code = 'mata:\n///\na\nend'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Mata.OpenError, 'mata:'),
             (Token.Text, '\n'),
@@ -314,10 +336,12 @@ class TestLineContinuationCommentsMata(object):
             (Token.Mata.Close, '\nend'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test4(self):
         code = 'mata:\na ///\n/// a ///\nend\nend'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Mata.OpenError, 'mata:'),
             (Token.Text, '\n'),
@@ -339,10 +363,12 @@ class TestLineContinuationCommentsMata(object):
             (Token.Mata.Close, '\nend'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test5(self):
         code = 'mata:\na ///\n// a ///\n\nend'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Mata.OpenError, 'mata:'),
             (Token.Text, '\n'),
@@ -361,12 +387,14 @@ class TestLineContinuationCommentsMata(object):
             (Token.Mata.Close, '\nend'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
 
 class TestSingleLineCommentsMata(object):
     def test1(self):
         code = 'mata\nx=//*\n*/1'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Mata.Open, 'mata'),
             (Token.Text, '\n'),
@@ -379,22 +407,26 @@ class TestSingleLineCommentsMata(object):
             (Token.Text, '1'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test2(self):
         code = 'mata:\n//\n'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Mata.OpenError, 'mata:'),
             (Token.Text, '\n'),
             (Token.Comment.Single, '//'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
 
 class TestStringsMata(object):
     def test_multiline_comment_inside_string(self):
         code = 'mata\n"/*"\nend'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Mata.Open, 'mata'),
             (Token.Text, '\n'),
@@ -405,10 +437,12 @@ class TestStringsMata(object):
             (Token.Mata.Close, '\nend'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_inline_comment_inside_string(self):
         code = 'mata\n"//"\nend'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Mata.Open, 'mata'),
             (Token.Text, '\n'),
@@ -419,10 +453,12 @@ class TestStringsMata(object):
             (Token.Mata.Close, '\nend'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_star_comment_inside_string(self):
         code = 'mata\na "*"\nend'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Mata.Open, 'mata'),
             (Token.Text, '\n'),
@@ -434,12 +470,14 @@ class TestStringsMata(object):
             (Token.Mata.Close, '\nend'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
 
 class TestBlocksMata(object):
     def test_multiple_mata_blocks(self):
         code = 'mata\nmata\nmata:\nend\nmata:'
-        tokens = CodeManager(code).tokens_final
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_final
         expected = [
             (Token.Mata.Open, 'mata'),
             (Token.Text, '\n'),
@@ -458,10 +496,12 @@ class TestBlocksMata(object):
             (Token.Mata.OpenError, 'mata:'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_paren_chunk(self):
         code = 'mata\n(\n 1\n)\nend'
-        tokens = CodeManager(code).tokens_final
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_final
         expected = [
             (Token.Mata.Open, 'mata'),
             (Token.Text, '\n'),
@@ -474,10 +514,12 @@ class TestBlocksMata(object):
             (Token.Mata.Close, '\nend'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_paren_chunk_recursive(self):
         code = 'mata\n(\n(\n a\n)\n)\nend'
-        tokens = CodeManager(code).tokens_final
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_final
         expected = [
             (Token.Mata.Open, 'mata'),
             (Token.Text, '\n'),
@@ -494,10 +536,12 @@ class TestBlocksMata(object):
             (Token.Mata.Close, '\nend'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_cap_chunk_with_inner_line_comment(self):
         code = 'mata\n(\n//(\n a\n)\nend'
-        tokens = CodeManager(code).tokens_final
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_final
         expected = [
             (Token.Mata.Open, 'mata'),
             (Token.Text, '\n'),
@@ -511,10 +555,12 @@ class TestBlocksMata(object):
             (Token.Mata.Close, '\nend'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_cap_chunk_with_inner_multiline_comment(self):
         code = 'mata\n(\n/*(*/\n a\n)\nend'
-        tokens = CodeManager(code).tokens_final
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_final
         expected = [
             (Token.Mata.Open, 'mata'),
             (Token.Text, '\n'),
@@ -528,10 +574,12 @@ class TestBlocksMata(object):
             (Token.Mata.Close, '\nend'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_if_block_not_matching_preceding_newline(self):
         code = 'mata\n1 if {\na\n}\nend'
-        tokens = CodeManager(code).tokens_final
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_final
         expected = [
             (Token.Mata.Open, 'mata'),
             (Token.Text, '\n'),
@@ -543,17 +591,20 @@ class TestBlocksMata(object):
             (Token.Mata.Close, '\nend'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_if_block_with_preceding_string(self):
         """ GH issue 139 """
         code = 'mata\nif ("0" == "1") {'
-        tokens = CodeManager(code).tokens_final
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_final
         expected = [
             (Token.Mata.Open, 'mata'),
             (Token.Text, '\n'),
             (Token.TextBlock, 'if ("0" == "1") {'),
             (Token.TextBlock, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
 
 class TestSemicolonDelimitCommentsMata(object):
@@ -568,7 +619,8 @@ class TestSemicolonDelimitCommentsMata(object):
         ```
         """
         code = '#delimit ;\nmata;\n// a\na;\nend;'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Comment.Single, '#delimit ;'),
             (Token.TextInSemicolonBlock, '\n'),
@@ -586,6 +638,7 @@ class TestSemicolonDelimitCommentsMata(object):
             (Token.SemicolonDelimiter, ';'),
             (Token.TextInSemicolonBlock, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_multiline_comment_after_inline_comment(self):
         """
@@ -598,7 +651,8 @@ class TestSemicolonDelimitCommentsMata(object):
         ```
         """
         code = '#delimit ;\nmata;\n// /* a\na;\nend;'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Comment.Single, '#delimit ;'),
             (Token.TextInSemicolonBlock, '\n'),
@@ -619,6 +673,7 @@ class TestSemicolonDelimitCommentsMata(object):
             (Token.SemicolonDelimiter, ';'),
             (Token.TextInSemicolonBlock, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_multiline_comment_after_star(self):
         """
@@ -631,7 +686,8 @@ class TestSemicolonDelimitCommentsMata(object):
         ```
         """
         code = '#delimit ;\nmata;\n/* a\na; */;'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Comment.Single, '#delimit ;'),
             (Token.TextInSemicolonBlock, '\n'),
@@ -649,6 +705,7 @@ class TestSemicolonDelimitCommentsMata(object):
             (Token.SemicolonDelimiter, ';'),
             (Token.TextInSemicolonBlock, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_inline_comment_inside_expr_with_whitespace(self):
         """
@@ -662,7 +719,8 @@ class TestSemicolonDelimitCommentsMata(object):
         ```
         """
         code = '#delimit ;\nmata;\n"a",\n // c\n"; b";\nend;'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Comment.Single, '#delimit ;'),
             (Token.TextInSemicolonBlock, '\n'),
@@ -689,6 +747,7 @@ class TestSemicolonDelimitCommentsMata(object):
             (Token.SemicolonDelimiter, ';'),
             (Token.TextInSemicolonBlock, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_inline_comment_inside_expr_without_whitespace(self):
         """
@@ -703,7 +762,8 @@ class TestSemicolonDelimitCommentsMata(object):
         ```
         """
         code = '#delimit ;\nmata;\n"a",\n// c\n"; b";\nend;'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Comment.Single, '#delimit ;'),
             (Token.TextInSemicolonBlock, '\n'),
@@ -730,6 +790,7 @@ class TestSemicolonDelimitCommentsMata(object):
             (Token.SemicolonDelimiter, ';'),
             (Token.TextInSemicolonBlock, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_newlines_in_semicolon_block_become_spaces(self):
         """
@@ -747,7 +808,8 @@ class TestSemicolonDelimitCommentsMata(object):
         ```
         """
         code = '#delimit ;\nmata;\n"\na\n2\nb\n"\n;\nend;'
-        tokens = CodeManager(code).tokens_final
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_final
         expected = [
             (Token.Mata.Open, ' mata'),
             (Token.Text, '\n'),
@@ -765,6 +827,7 @@ class TestSemicolonDelimitCommentsMata(object):
             (Token.Mata.Close, '\n end'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
 
 class TestIsCompleteMata(object):
@@ -781,7 +844,9 @@ class TestIsCompleteMata(object):
         ]
     )  # yapf: disable
     def test_is_comment_complete(self, code, complete):
-        assert CodeManager(code, False).is_complete == complete
+        kernel = StataKernel()
+        assert CodeManager(code, kernel, False).is_complete == complete
+        kernel.do_shutdown(False)
 
     @pytest.mark.parametrize(
         'code,complete',
@@ -800,7 +865,9 @@ class TestIsCompleteMata(object):
         ]
     )  # yapf: disable
     def test_is_comment_complete_in_sc_delimit_block(self, code, complete):
-        assert CodeManager(code, True).is_complete == complete
+        kernel = StataKernel()
+        assert CodeManager(code, kernel, True).is_complete == complete
+        kernel.do_shutdown(False)
 
     @pytest.mark.parametrize(
         'code,complete',
@@ -817,7 +884,9 @@ class TestIsCompleteMata(object):
         ]
     )  # yapf: disable
     def test_is_block_complete(self, code, complete):
-        assert CodeManager(code, False).is_complete == complete
+        kernel = StataKernel()
+        assert CodeManager(code, kernel, False).is_complete == complete
+        kernel.do_shutdown(False)
 
     @pytest.mark.parametrize(
         'code,complete',
@@ -834,6 +903,8 @@ class TestIsCompleteMata(object):
         ]
     )  # yapf: disable
     def test_is_block_complete_in_sc_delimit_block(self, code, complete):
-        assert CodeManager(code, True).is_complete == complete
+        kernel = StataKernel()
+        assert CodeManager(code, kernel, True).is_complete == complete
+        kernel.do_shutdown(False)
 
 # yapf: enable

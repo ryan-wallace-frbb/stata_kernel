@@ -1,6 +1,7 @@
 import pytest
 from pygments.token import Token
 from stata_kernel.code_manager import CodeManager
+from stata_kernel.kernel import StataKernel
 
 
 # yapf: disable
@@ -19,7 +20,8 @@ class TestCommentsFromStataList(object):
         ```
         """
         code = '* /* a\na\n*/'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Comment.Single, '*'),
             (Token.Comment.Single, ' '),
@@ -32,6 +34,7 @@ class TestCommentsFromStataList(object):
             (Token.Comment.Multiline, '*/'),
             (Token.Comment.Single, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_ignored_multiline_after_inline_comment_after_star_comment(self):
         """
@@ -41,7 +44,8 @@ class TestCommentsFromStataList(object):
         ```
         """
         code = '* // /* a\na'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Comment.Single, '*'),
             (Token.Comment.Single, ' '),
@@ -55,6 +59,7 @@ class TestCommentsFromStataList(object):
             (Token.Text, 'a'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_ignored_multiline_after_inline_comment(self):
         """
@@ -64,7 +69,8 @@ class TestCommentsFromStataList(object):
         ```
         """
         code = '// /* a\na'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Comment.Single, '//'),
             (Token.Comment.Single, ' '),
@@ -76,6 +82,7 @@ class TestCommentsFromStataList(object):
             (Token.Text, 'a'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_inline_comment_needs_preceding_whitespace(self):
         """
@@ -86,7 +93,8 @@ class TestCommentsFromStataList(object):
         ```
         """
         code = '*// /* a\na\n*/'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Comment.Single, '*'),
             (Token.Comment.Single, '/'),
@@ -101,6 +109,7 @@ class TestCommentsFromStataList(object):
             (Token.Comment.Multiline, '*/'),
             (Token.Comment.Single, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_line_continuation_comment_after_star_comment(self):
         """
@@ -110,7 +119,8 @@ class TestCommentsFromStataList(object):
         ```
         """
         code = '* ///\na\na'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Comment.Single, '*'),
             (Token.Comment.Single, ' '),
@@ -120,6 +130,7 @@ class TestCommentsFromStataList(object):
             (Token.Text, 'a'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_line_continuation_ignored_after_inline_comment(self):
         """
@@ -129,7 +140,8 @@ class TestCommentsFromStataList(object):
         ```
         """
         code = '// /// a\na'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Comment.Single, '//'),
             (Token.Comment.Single, ' '),
@@ -142,6 +154,7 @@ class TestCommentsFromStataList(object):
             (Token.Text, 'a'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_nesting_of_multiline_comments(self):
         """
@@ -157,7 +170,8 @@ class TestCommentsFromStataList(object):
         ```
         """
         code = '/*\n/* a */\na\n*/* a\na\n*/\na'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Comment.Multiline, '/*'),
             (Token.Comment.Multiline, '\n'),
@@ -180,6 +194,7 @@ class TestCommentsFromStataList(object):
             (Token.Text, 'a'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_inline_comment_breaks_line_continuation_comment(self):
         """
@@ -190,7 +205,8 @@ class TestCommentsFromStataList(object):
         ```
         """
         code = '* a ///\n// a ///\na'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Comment.Single, '*'),
             (Token.Comment.Single, ' '),
@@ -202,6 +218,7 @@ class TestCommentsFromStataList(object):
             (Token.Text, 'a'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_inline_comment_breaks_line_continuation_comment2(self):
         """
@@ -212,7 +229,8 @@ class TestCommentsFromStataList(object):
         ```
         """
         code = 'a ///\n// a ///\na'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Text, 'a'),
             (Token.Text, ' '),
@@ -229,6 +247,8 @@ class TestCommentsFromStataList(object):
             (Token.Text, 'a'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
+
 
 class TestMultilineComments(object):
     def test_multiline_comment_across_empty_whitespace_lines(self):
@@ -240,7 +260,8 @@ class TestMultilineComments(object):
         ```
         """
         code = 'a /*\n\n*/ a'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Text, 'a'),
             (Token.Text, ' '),
@@ -252,10 +273,12 @@ class TestMultilineComments(object):
             (Token.Text, 'a'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_multiline1(self):
         code = 'a/* a */a'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Text, 'a'),
             (Token.Comment.Multiline, '/*'),
@@ -266,11 +289,14 @@ class TestMultilineComments(object):
             (Token.Text, 'a'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
+
 
 class TestLineContinuationComments(object):
     def test1(self):
         code = 'a ///\na'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Text, 'a'),
             (Token.Text, ' '),
@@ -279,10 +305,12 @@ class TestLineContinuationComments(object):
             (Token.Text, 'a'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test2(self):
         code = 'a///\na'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Text, 'a'),
             (Token.Text, '/'),
@@ -292,20 +320,24 @@ class TestLineContinuationComments(object):
             (Token.Text, 'a'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test3(self):
         code = '///\na'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Comment.Special, '///'),
             (Token.Comment.Special, '\n'),
             (Token.Text, 'a'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test4(self):
         code = 'a ///\n/// a ///'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Text, 'a'),
             (Token.Text, ' '),
@@ -320,10 +352,12 @@ class TestLineContinuationComments(object):
             (Token.Comment.Special, '/'),
             (Token.Comment.Special, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test5(self):
         code = 'a ///\n// a ///'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Text, 'a'),
             (Token.Text, ' '),
@@ -338,11 +372,14 @@ class TestLineContinuationComments(object):
             (Token.Comment.Single, '/'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
+
 
 class TestSingleLineComments(object):
     def test1(self):
         code = 'di//*\n*/1'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Text, 'd'),
             (Token.Text, 'i'),
@@ -353,19 +390,24 @@ class TestSingleLineComments(object):
             (Token.Text, '1'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test2(self):
         code = '//\n'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Comment.Single, '//'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
+
 
 class TestStrings(object):
     def test_multiline_comment_inside_string(self):
         code = 'di "/*"'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Text, 'd'),
             (Token.Text, 'i'),
@@ -376,10 +418,12 @@ class TestStrings(object):
             (Token.Text, '"'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_inline_comment_inside_string(self):
         code = 'di "//"'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Text, 'd'),
             (Token.Text, 'i'),
@@ -390,10 +434,12 @@ class TestStrings(object):
             (Token.Text, '"'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_star_comment_inside_string(self):
         code = 'a "*"'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Text, 'a'),
             (Token.Text, ' '),
@@ -402,11 +448,14 @@ class TestStrings(object):
             (Token.Text, '"'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
+
 
 class TestBlocks(object):
     def test_cap_chunk(self):
         code = 'cap {\n a\n}'
-        tokens = CodeManager(code).tokens_final
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_final
         expected = [
             (Token.Text, 'c'),
             (Token.Text, 'a'),
@@ -420,10 +469,12 @@ class TestBlocks(object):
             (Token.TextBlock, '}'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_cap_chunk_recursive(self):
         code = 'cap {\n{\n a\n}\n}'
-        tokens = CodeManager(code).tokens_final
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_final
         expected = [
             (Token.Text, 'c'),
             (Token.Text, 'a'),
@@ -441,10 +492,12 @@ class TestBlocks(object):
             (Token.TextBlock, '}'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_cap_chunk_with_inner_line_comment(self):
         code = 'cap {\n*{\n a\n}'
-        tokens = CodeManager(code).tokens_final
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_final
         expected = [
             (Token.Text, 'c'),
             (Token.Text, 'a'),
@@ -459,10 +512,12 @@ class TestBlocks(object):
             (Token.TextBlock, '}'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_cap_chunk_with_inner_multiline_comment(self):
         code = 'cap {\n/*{*/\n a\n}'
-        tokens = CodeManager(code).tokens_final
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_final
         expected = [
             (Token.Text, 'c'),
             (Token.Text, 'a'),
@@ -477,10 +532,12 @@ class TestBlocks(object):
             (Token.TextBlock, '}'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_if_block_not_matching_preceding_newline(self):
         code = 'di 1\nif {\na\n}'
-        tokens = CodeManager(code).tokens_final
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_final
         expected = [
             (Token.Text, 'd'),
             (Token.Text, 'i'),
@@ -497,11 +554,13 @@ class TestBlocks(object):
             (Token.TextBlock, '}'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_if_block_with_preceding_string(self):
         """ GH issue 139 """
         code = 'if "0" == "1" {'
-        tokens = CodeManager(code).tokens_final
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_final
         expected = [
             (Token.Text, 'i'),
             (Token.Text, 'f'),
@@ -520,6 +579,8 @@ class TestBlocks(object):
             (Token.TextBlock, '{'),
             (Token.TextBlock, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
+
 
 class TestSemicolonDelimitComments(object):
     def test_inline_comment(self):
@@ -531,7 +592,8 @@ class TestSemicolonDelimitComments(object):
         ```
         """
         code = '#delimit ;\n// a\na;'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Comment.Single, '#delimit ;'),
             (Token.TextInSemicolonBlock, '\n'),
@@ -543,6 +605,7 @@ class TestSemicolonDelimitComments(object):
             (Token.SemicolonDelimiter, ';'),
             (Token.TextInSemicolonBlock, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_multiline_comment_after_inline_comment(self):
         """
@@ -553,7 +616,8 @@ class TestSemicolonDelimitComments(object):
         ```
         """
         code = '#delimit ;\n// /* a\na;'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Comment.Single, '#delimit ;'),
             (Token.TextInSemicolonBlock, '\n'),
@@ -568,6 +632,7 @@ class TestSemicolonDelimitComments(object):
             (Token.SemicolonDelimiter, ';'),
             (Token.TextInSemicolonBlock, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_star_comment(self):
         """
@@ -578,7 +643,8 @@ class TestSemicolonDelimitComments(object):
         ```
         """
         code = '#delimit ;\n* a\na;'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Comment.Single, '#delimit ;'),
             (Token.TextInSemicolonBlock, '\n'),
@@ -590,6 +656,7 @@ class TestSemicolonDelimitComments(object):
             (Token.SemicolonDelimiter, ';'),
             (Token.TextInSemicolonBlock, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_multiline_comment_after_star(self):
         """
@@ -600,7 +667,8 @@ class TestSemicolonDelimitComments(object):
         ```
         """
         code = '#delimit ;\n* /* a\na;'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Comment.Single, '#delimit ;'),
             (Token.TextInSemicolonBlock, '\n'),
@@ -614,6 +682,7 @@ class TestSemicolonDelimitComments(object):
             (Token.Comment.Multiline, ';'),
             (Token.Comment.Multiline, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_inline_comment_after_star_comment(self):
         """
@@ -625,7 +694,8 @@ class TestSemicolonDelimitComments(object):
         ```
         """
         code = '#delimit ;\n* // a\na;'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Comment.Single, '#delimit ;'),
             (Token.TextInSemicolonBlock, '\n'),
@@ -640,6 +710,7 @@ class TestSemicolonDelimitComments(object):
             (Token.SemicolonDelimiter, ';'),
             (Token.TextInSemicolonBlock, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_inline_comment_inside_expr_with_whitespace(self):
         """
@@ -651,7 +722,8 @@ class TestSemicolonDelimitComments(object):
         ```
         """
         code = '#delimit ;\na\n // c\na;'
-        tokens = CodeManager(code).tokens_fp_all
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_fp_all
         expected = [
             (Token.Comment.Single, '#delimit ;'),
             (Token.TextInSemicolonBlock, '\n'),
@@ -665,6 +737,7 @@ class TestSemicolonDelimitComments(object):
             (Token.SemicolonDelimiter, ';'),
             (Token.TextInSemicolonBlock, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
     def test_inline_comment_inside_expr_without_whitespace(self):
         """
@@ -708,7 +781,8 @@ class TestSemicolonDelimitComments(object):
         ```
         """
         code = '#delimit ;\na\nb\nc\nd;'
-        tokens = CodeManager(code).tokens_final
+        kernel = StataKernel()
+        tokens = CodeManager(code, kernel).tokens_final
         expected = [
             (Token.Text, ' '),
             (Token.Text, 'a'),
@@ -720,6 +794,7 @@ class TestSemicolonDelimitComments(object):
             (Token.Text, 'd'),
             (Token.Text, '\n')]
         assert tokens == expected
+        kernel.do_shutdown(False)
 
 
 class TestIsComplete(object):
@@ -733,66 +808,77 @@ class TestIsComplete(object):
      ('/// \n\n', True),
      ('/* \n\n', False),
      ('/* \n\n*/', True),
-     ]) # yapf: disable
+     ])  # yapf: disable
     def test_is_comment_complete(self, code, complete):
-        assert CodeManager(code, False).is_complete == complete
+        kernel = StataKernel()
+        assert CodeManager(code, kernel, False).is_complete == complete
+        kernel.do_shutdown(False)
 
     @pytest.mark.parametrize(
-    'code,complete',
-    [
-     ('//', True),
-     ('// sdfsa', True),
-     ('/// sdfsa', False),
-     ('/// \n', False),
-     ('/// \n\n', True),
-     ('/// \n;', True),
-     ('/// \n\n;', True),
-     ('/* \n\n', False),
-     ('/* \n\n*/', True),
-     ('/* \n\n*/ di hi;', True),
-     ('/* \n\n*/;', True),
-     ]) # yapf: disable
+        'code,complete',
+        [
+         ('//', True),
+         ('// sdfsa', True),
+         ('/// sdfsa', False),
+         ('/// \n', False),
+         ('/// \n\n', True),
+         ('/// \n;', True),
+         ('/// \n\n;', True),
+         ('/* \n\n', False),
+         ('/* \n\n*/', True),
+         ('/* \n\n*/ di hi;', True),
+         ('/* \n\n*/;', True),
+        ]
+     )  # yapf: disable
     def test_is_comment_complete_in_sc_delimit_block(self, code, complete):
-        assert CodeManager(code, True).is_complete == complete
+        kernel = StataKernel()
+        assert CodeManager(code, kernel, True).is_complete == complete
+        kernel.do_shutdown(False)
 
     @pytest.mark.parametrize(
-    'code,complete',
-    [
-     ('di 1', True),
-     (';', True),
-     ('foreach i in 1 ', True),
-     ('foreach i in 1 {', False),
-     ('foreach i in 1 2 {\nif {\n }', False),
-     ('disp "hi"; // also hangs', True),
-     ('disp "hi" // also hangs', True),
-     ('if "0" == "1" {', False), # issue 139
-     ('if "0" == "1" {\ndi "hi"\n}', True), # issue 139
-     ]) # yapf: disable
+        'code,complete',
+        [
+         ('di 1', True),
+         (';', True),
+         ('foreach i in 1 ', True),
+         ('foreach i in 1 {', False),
+         ('foreach i in 1 2 {\nif {\n }', False),
+         ('disp "hi"; // also hangs', True),
+         ('disp "hi" // also hangs', True),
+         ('if "0" == "1" {', False),  # issue 139
+         ('if "0" == "1" {\ndi "hi"\n}', True),  # issue 139
+        ]
+    )  # yapf: disable
     def test_is_block_complete(self, code, complete):
-        assert CodeManager(code, False).is_complete == complete
+        kernel = StataKernel()
+        assert CodeManager(code, kernel, False).is_complete == complete
+        kernel.do_shutdown(False)
 
     @pytest.mark.parametrize(
-    'code,complete',
-    [
-     ('di 1', False),
-     ('di 1;', True),
-     ('di "{" 1;', True),
-     ('di "}" 1;', True),
-     (';', True),
-     ('foreach i in 1 2 3 4', False),
-     ('foreach i in 1 2 3 4 {', False),
-     ('foreach i in 1 2 3 4 {;', False),
-     ('foreach i in 1 2 {;\nif {\n }', False),
-     ('foreach i in 1 2 {;\nif {;\n };', False),
-     ('foreach i in 1 2 {;\nif {;\n };\n};', True),
-     ('foreach i in 1 2 {;if {; };};', True),
-     ('disp "hi"; // also hangs', True),
-     ('disp "hi" // also hangs', False),
-     ('if "0" == "1" {;', False), # issue 139
-     ('if "0" == "1" {;\ndi "hi";\n};', True), # issue 139
-     ('if "0" == "1" {;di "hi";};', True), # issue 139
-     ]) # yapf: disable
+        'code,complete',
+        [
+         ('di 1', False),
+         ('di 1;', True),
+         ('di "{" 1;', True),
+         ('di "}" 1;', True),
+         (';', True),
+         ('foreach i in 1 2 3 4', False),
+         ('foreach i in 1 2 3 4 {', False),
+         ('foreach i in 1 2 3 4 {;', False),
+         ('foreach i in 1 2 {;\nif {\n }', False),
+         ('foreach i in 1 2 {;\nif {;\n };', False),
+         ('foreach i in 1 2 {;\nif {;\n };\n};', True),
+         ('foreach i in 1 2 {;if {; };};', True),
+         ('disp "hi"; // also hangs', True),
+         ('disp "hi" // also hangs', False),
+         ('if "0" == "1" {;', False),  # issue 139
+         ('if "0" == "1" {;\ndi "hi";\n};', True),  # issue 139
+         ('if "0" == "1" {;di "hi";};', True),  # issue 139
+        ]
+    )  # yapf: disable
     def test_is_block_complete_in_sc_delimit_block(self, code, complete):
-        assert CodeManager(code, True).is_complete == complete
+        kernel = StataKernel()
+        assert CodeManager(code, kernel, True).is_complete == complete
+        kernel.do_shutdown(False)
 
 # yapf: enable

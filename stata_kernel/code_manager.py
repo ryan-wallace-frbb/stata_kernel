@@ -2,12 +2,12 @@ import re
 import platform
 import hashlib
 
+from pathlib import Path
 from pygments import lex
 from textwrap import dedent
 
 from .stata_lexer import StataLexer
 from .stata_lexer import CommentAndDelimitLexer
-from .config import config
 
 base_graph_keywords = [
     r'gr(a|ap|aph)?' + r'(?!\s+' + r'(save|replay|print|export|dir|set|' +
@@ -35,7 +35,7 @@ class CodeManager():
     """Class to deal with text before sending to Stata
     """
 
-    def __init__(self, code, semicolon_delimit=False, mata_mode=False):
+    def __init__(self, code, kernel, semicolon_delimit=False, mata_mode=False):
         code = re.sub(r'\r\n', r'\n', code)
         # Hard tabs in input are not shown in output and mess up removing lines
         code = re.sub(r'\t', ' ', code)
@@ -47,6 +47,8 @@ class CodeManager():
             code = '#delimit ;\n' + code
         elif mata_mode:
             code = 'mata\n' + code
+
+        self.kernel = kernel
 
         # First use the Comment and Delimiting lexer
         self.tokens_fp_all = self.tokenize_first_pass(code)
@@ -260,19 +262,19 @@ class CodeManager():
             use_include = use_include and not stata.mata_mode
 
         # Insert `graph export`
-        graph_fmt = config.get('graph_format', 'svg')
-        graph_scale = float(config.get('graph_scale', '1'))
-        graph_width = int(config.get('graph_width', '600'))
-        graph_height = config.get('graph_height')
-        cache_dir = config.get('cache_dir')
+        graph_fmt = self.kernel.conf.get('graph_format', 'svg')
+        graph_scale = float(self.kernel.conf.get('graph_scale', '1'))
+        graph_width = int(self.kernel.conf.get('graph_width', '600'))
+        graph_height = self.kernel.conf.get('graph_height')
+        cache_dir = self.kernel.conf.get('cache_dir')
         if graph_fmt == 'svg':
-            pdf_dup = config.get('graph_svg_redundancy', 'True')
+            pdf_dup = self.kernel.conf.get('graph_svg_redundancy', 'True')
             pdf_dup = pdf_dup.lower() == 'true'
         elif graph_fmt == 'png':
-            pdf_dup = config.get('graph_png_redundancy', 'False')
+            pdf_dup = self.kernel.conf.get('graph_png_redundancy', 'False')
             pdf_dup = pdf_dup.lower() == 'true'
         elif graph_fmt == 'eps':
-            pdf_dup = config.get('graph_eps_redundancy', 'False')
+            pdf_dup = self.kernel.conf.get('graph_eps_redundancy', 'False')
             pdf_dup = pdf_dup.lower() == 'true'
         else:
             pdf_dup = False
@@ -286,7 +288,7 @@ class CodeManager():
         if graph_fmt == 'eps':
             dim_str = ''
 
-        cache_dir_str = str(cache_dir)
+        cache_dir_str = str(cache_dir.name)
         if platform.system() == 'Windows':
             cache_dir_str = re.sub(r'\\', '/', cache_dir_str)
         gph_cnt = 'stata_kernel_graph_counter'
@@ -312,7 +314,7 @@ class CodeManager():
             g_exp = stata._mata_escape(g_exp)
         # yapf: enable
 
-        user_graph_keywords = config.get(
+        user_graph_keywords = self.kernel.conf.get(
             'user_graph_keywords', 'coefplot,vioplot')
         user_graph_keywords = [
             re.sub(r'\s+', '\\\\s+', x.strip())
@@ -327,7 +329,8 @@ class CodeManager():
         hash_text = hashlib.md5(text.encode('utf-8')).hexdigest()
         text_to_exclude = text
         if use_include:
-            with (cache_dir / 'include.do').open('w', encoding='utf-8') as f:
+            include_fp = Path(cache_dir_str) / 'include.do'
+            with include_fp.open('w', encoding='utf-8') as f:
                 f.write(text + '\n')
             text = 'include "{}/include.do"'.format(cache_dir_str)
             text_to_exclude = text + '\n' + text_to_exclude
